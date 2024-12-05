@@ -8,7 +8,7 @@
   "dependencies": {
     "axios": "^0.27.2",
     "express": "^4.18.1",
-    "express-tools": "^2.1.4",
+    "express-tools": "^2.1.5",
     "javascript-obfuscator": "^4.1.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.12.0",

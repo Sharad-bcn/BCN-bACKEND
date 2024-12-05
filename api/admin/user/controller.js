@@ -1,7 +1,7 @@
-const { _r } = require('express-tools')
-const { User } = require('../../../models')
-const mongoose = require('mongoose')
-const ObjectId = mongoose.Types.ObjectId
+const { _r } = require('express-tools');
+const { User } = require('../../../models');
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
 /**
  * @argument {String} plan
@@ -18,71 +18,79 @@ const ObjectId = mongoose.Types.ObjectId
  * @argument {ObjectId} fkRefId
  * @argument {String} pin
  * @argument {String} logo
+ * @argument {ObjectId} referredBy
+ * @argument {Number} rewards
  */
 
 module.exports.create = async (req, res) => {
   try {
-    let { args } = req.bind
+    let { args } = req.bind;
+    args.plan = 'Plan 0';
 
-    args.plan = 'Plan 0'
+    // Check if user already exists by phone number
+    const alreadyExists = await User.findOne({ phoneNo: args.phoneNo });
+    if (alreadyExists) return _r.error({ req, res, code: 400, message: 'User already exists' });
 
-    const alreadyExists = await User.findOne({
-      phoneNo: args.phoneNo
-    })
-
-    if (alreadyExists) return _r.error({ req, res, code: 400, message: 'User already exists' })
-
+    // Check for duplicate email
     if (args.email) {
-      const user = await User.findOne({
-        email: args.email
-      })
-      if (user) return _r.error({ req, res, code: 400, message: 'User with this email already exists' })
+      const userWithEmail = await User.findOne({ email: args.email });
+      if (userWithEmail) return _r.error({ req, res, code: 400, message: 'User with this email already exists' });
     }
-    // args.userRefId = new ObjectId().toString()
 
+    // Validate referredBy if provided
+    if (args.referredBy) {
+      const referrer = await User.findById(args.referredBy);
+      if (!referrer) return _r.error({ req, res, code: 400, message: 'Referrer not found' });
+
+      // Optionally, add rewards to the referrer
+      referrer.rewards += 10; // Example reward
+      await referrer.save();
+    }
+
+    // Handle fkRefId validation
     if (args.fkRefId) {
-      const fkUserRefId = await User.findOne({ userRefId: args.fkRefId })
-
-      if (!fkUserRefId) return _r.error({ req, res, code: 400, message: 'Reference id not found' })
-      else args.fkRefId = fkUserRefId.userRefId
+      const fkUserRefId = await User.findOne({ userRefId: args.fkRefId });
+      if (!fkUserRefId) return _r.error({ req, res, code: 400, message: 'Reference id not found' });
+      args.fkRefId = fkUserRefId.userRefId;
     }
 
-    const duration = args.plan === 'Plan A' ? 1 : args.plan === 'Plan B' ? 5 : args.plan === 'Plan C' ? 10 : 0
-    let expirationDate = new Date(Date.now())
-    expirationDate.setFullYear(expirationDate.getFullYear() + duration)
-    args.planExpiresAt = expirationDate
+    // Set plan expiration date
+    const duration = args.plan === 'Plan A' ? 1 : args.plan === 'Plan B' ? 5 : args.plan === 'Plan C' ? 10 : 0;
+    let expirationDate = new Date(Date.now());
+    expirationDate.setFullYear(expirationDate.getFullYear() + duration);
+    args.planExpiresAt = expirationDate;
 
-    let newUser = await User.create(args)
+    // Create the new user
+    let newUser = await User.create(args);
 
     _r.success({
       req,
       res,
       code: 201,
-      message: newUser.firstName + ' registered successfully'
-    })
+      message: newUser.firstName + ' registered successfully',
+    });
   } catch (error) {
-    _r.error({ req, res, error })
+    _r.error({ req, res, error });
   }
-}
+};
 
 /**
  * @argument {ObjectId} id
  */
 module.exports.blockUser = async (req, res) => {
   try {
-    const { args } = req.bind
+    const { args } = req.bind;
 
-    const getUser = await User.findById(args.id, '-pin')
-
-    if (!getUser) return _r.error({ req, res, code: 400, message: 'User not found' })
+    const getUser = await User.findById(args.id, '-pin');
+    if (!getUser) return _r.error({ req, res, code: 400, message: 'User not found' });
 
     const updateUserStatus = await User.findByIdAndUpdate(
       args.id,
       { $set: { isBlocked: !getUser.isBlocked } },
       { new: true }
-    )
+    );
 
-    if (!updateUserStatus) return _r.error({ req, res, code: 400, message: 'User not found' })
+    if (!updateUserStatus) return _r.error({ req, res, code: 400, message: 'User not found' });
 
     _r.success({
       req,
@@ -90,13 +98,13 @@ module.exports.blockUser = async (req, res) => {
       code: 201,
       message: getUser.firstName + (!getUser.isBlocked ? ' is Blocked' : ' is Unblocked'),
       payload: {
-        status: !getUser.isBlocked
-      }
-    })
+        status: !getUser.isBlocked,
+      },
+    });
   } catch (error) {
-    _r.error({ req, res, error })
+    _r.error({ req, res, error });
   }
-}
+};
 
 /**
  * @argument {Number} state
@@ -107,28 +115,33 @@ module.exports.blockUser = async (req, res) => {
  */
 module.exports.fetchAll = async (req, res) => {
   try {
-    const { args } = req.bind
-    let searchFilter = {}
-    const searchQuery = new RegExp(args.searchQuery, 'i')
+    const { args } = req.bind;
+    let searchFilter = {};
+    const searchQuery = new RegExp(args.searchQuery, 'i');
 
-    if (searchQuery) searchFilter.$or = [{ firstName: searchQuery }, { lastName: searchQuery }]
-    if (args.state) searchFilter.state = args.state
-    if (args.city) searchFilter.city = args.city
+    if (searchQuery) searchFilter.$or = [{ firstName: searchQuery }, { lastName: searchQuery }];
+    if (args.state) searchFilter.state = args.state;
+    if (args.city) searchFilter.city = args.city;
 
-    const getAllUsersCount = await User.count(searchFilter)
+    const getAllUsersCount = await User.count(searchFilter);
 
-    const getAllUsers = await User.find(searchFilter, '_id firstName lastName isBlocked logo createdAt', { lean: true })
+    const getAllUsers = await User.find(searchFilter, '_id firstName lastName isBlocked logo referredBy rewards createdAt', { lean: true })
       .sort({ createdAt: -1 })
       .limit(args.limit || 10)
-      .skip(args.pageNo > 1 ? (args.limit || 10) * (args.pageNo - 1) : 0)
+      .skip(args.pageNo > 1 ? (args.limit || 10) * (args.pageNo - 1) : 0);
 
-    if (!getAllUsers.length) return _r.error({ req, res, code: 400, message: 'Users not found' })
+    if (!getAllUsers.length) return _r.error({ req, res, code: 400, message: 'Users not found' });
 
-    _r.success({ req, res, code: 200, payload: { total: getAllUsersCount, Users: getAllUsers } })
+    _r.success({
+      req,
+      res,
+      code: 200,
+      payload: { total: getAllUsersCount, Users: getAllUsers },
+    });
   } catch (error) {
-    _r.error({ req, res, error })
+    _r.error({ req, res, error });
   }
-}
+};
 
 /**
  * @argument {ObjectId} id
@@ -137,13 +150,13 @@ module.exports.fetchAll = async (req, res) => {
  */
 module.exports.updateApprovalStatus = async (req, res) => {
   try {
-    const { args } = req.bind
+    const { args } = req.bind;
 
-    const fetchUser = await User.findOne({ _id: args.id, approvalStatus: 'Pending' })
+    const fetchUser = await User.findOne({ _id: args.id, approvalStatus: 'Pending' });
 
-    if (!fetchUser) return _r.error({ req, res, code: 400, message: 'User not found' })
+    if (!fetchUser) return _r.error({ req, res, code: 400, message: 'User not found' });
 
-    if (fetchUser.isApproved) return _r.error({ req, res, code: 400, message: 'User Already Approved' })
+    if (fetchUser.isApproved) return _r.error({ req, res, code: 400, message: 'User Already Approved' });
 
     const updateUser = await User.findByIdAndUpdate(
       args.id,
@@ -151,13 +164,13 @@ module.exports.updateApprovalStatus = async (req, res) => {
         $set: {
           isApproved: args.isApproved,
           approvalStatus: args.isApproved ? 'Approved' : 'Rejected',
-          rejectionMessage: args.isApproved ? '' : args.rejectionMessage
-        }
+          rejectionMessage: args.isApproved ? '' : args.rejectionMessage,
+        },
       },
       { new: true }
-    )
+    );
 
-    if (!updateUser) return _r.error({ req, res, code: 400, message: 'User not found' })
+    if (!updateUser) return _r.error({ req, res, code: 400, message: 'User not found' });
 
     _r.success({
       req,
@@ -167,12 +180,12 @@ module.exports.updateApprovalStatus = async (req, res) => {
         updateUser.firstName +
         ' ' +
         updateUser.lastName +
-        (updateUser.isApproved ? ' approved successfully' : ' approval rejected')
-    })
+        (updateUser.isApproved ? ' approved successfully' : ' approval rejected'),
+    });
   } catch (error) {
-    _r.error({ req, res, error })
+    _r.error({ req, res, error });
   }
-}
+};
 
 /**
  * @argument {Number} perPage
@@ -180,33 +193,28 @@ module.exports.updateApprovalStatus = async (req, res) => {
  */
 module.exports.fetchNewlyCreated = async (req, res) => {
   try {
-    const { args } = req.bind
+    const { args } = req.bind;
 
-    const getUsersCount = await User.count({ isApproved: false, isBlocked: false, approvalStatus: 'Pending' })
+    const getUsersCount = await User.count({ isApproved: false, isBlocked: false, approvalStatus: 'Pending' });
 
     const getUsers = await User.find(
       { isBlocked: false, isApproved: false, approvalStatus: 'Pending' },
-      'firstName lastName gender email address state city phoneNo logo updatedAt',
-      {
-        lean: true
-      }
+      'firstName lastName phoneNo email state city pinCode createdAt referredBy rewards',
+      { lean: true }
     )
-      .sort({ updatedAt: -1 })
+      .sort({ createdAt: -1 })
       .limit(args.perPage || 10)
-      .skip(args.pageNo > 1 ? (args.perPage || 10) * (args.pageNo - 1) : 0)
+      .skip(args.pageNo > 1 ? (args.perPage || 10) * (args.pageNo - 1) : 0);
 
-    if (!getUsers) return _r.error({ req, res, code: 400, message: 'Users not found' })
+    if (!getUsers.length) return _r.error({ req, res, code: 400, message: 'No new users found' });
 
     _r.success({
       req,
       res,
       code: 200,
-      payload: {
-        total: getUsersCount,
-        Users: getUsers
-      }
-    })
+      payload: { total: getUsersCount, users: getUsers },
+    });
   } catch (error) {
-    _r.error({ req, res, error })
+    _r.error({ req, res, error });
   }
-}
+};

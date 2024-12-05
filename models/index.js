@@ -1,3 +1,4 @@
+
 const models = {
   ActiveAdmins: require('./activeAdmins'),
   ActiveUsers: require('./activeUsers'),
@@ -10,6 +11,7 @@ const models = {
   LandingPage: require('./landingPage'),
   Leads: require('./leads'),
   Listing: require('./listing'),
+  Matrimonial: require('./matrimonialPage'),
   Notification: require('./notification'),
   Payment: require('./payment'),
   State: require('./state'),

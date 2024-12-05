@@ -82,6 +82,14 @@ const UserSchema = new Schema(
     isNewUser: {
       type: Boolean,
       default: true
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User'
+    },
+    rewards: {
+      type : Number,
+      default: 0
     }
   },
   { timestamps: true }
