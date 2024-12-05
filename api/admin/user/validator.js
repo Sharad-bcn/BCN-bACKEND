@@ -21,7 +21,11 @@ module.exports.create = (req, res, next) =>
     city: $joi.string().trim(),
     pinCode: $joi.number().integer().min(100000).max(999999).allow(null, ''),
     pin: $joi.string(),
-    logo: $joi.string().allow(null, '')
+    logo: $joi.string().allow(null, ''),
+    
+    // New fields validation
+    referredBy: $joi.string().pattern(/^[0-9a-fA-F]{24}$/).allow(null, ''), // Validates ObjectId format if referredBy is provided
+    rewards: $joi.number().min(0).default(0) // Rewards should be a number and default to 0 if not provided
   })
 
 module.exports.blockUser = (req, res, next) =>
