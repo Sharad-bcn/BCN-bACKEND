@@ -102,11 +102,14 @@ module.exports.checkOrigin = async (req, res, next) => {
     const allowedHosts = [
       // 'http://localhost:5004',
       // 'http://localhost:5003',
+      'http://localhost:8001',
       'https://admin-dev.bcnindia.com',
       'https://admin.bcnindia.com',
       'https://dev.bcnindia.com',
       'https://bcnindia.com',
-      'https://www.bcnindia.com'
+      'https://www.bcnindia.com',
+      'https://admin-test.bcnindia.com',
+      'https://test.bcnindia.com'
     ]
     const origin = req.get('origin')
     const backendaccesskey = req.get('Backendaccesskey')

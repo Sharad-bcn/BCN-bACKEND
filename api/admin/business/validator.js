@@ -12,3 +12,8 @@ module.exports.fetchNewlyCreated = (req, res, next) =>
     perPage: $joi.number(),
     pageNo: $joi.number().min(1)
   })
+  module.exports.checkUserBusiness = (req, res, next) =>
+    _validate.joi(req, res, next, {
+      userId: $joi.string().required() // Validate userId as string (ObjectId)
+    });
+  

@@ -54,3 +54,11 @@ module.exports.fetchNewlyCreated = (req, res, next) =>
     perPage: $joi.number(),
     pageNo: $joi.number().min(1)
   })
+module.exports.fetchSingle = (req, res, next) =>
+    _validate.joi(req, res, next, {
+      id: $joi.string().pattern(/^[0-9a-fA-F]{24}$/).required() 
+  })
+module.exports.fetchUserBusinesses = (req, res, next) =>
+      _validate.joi(req, res, next, {
+        userId: $joi.string().pattern(/^[0-9a-fA-F]{24}$/).required() 
+  })

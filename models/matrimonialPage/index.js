@@ -71,5 +71,5 @@ const MatrimonialSchema = new Schema(
     { timestamps: true } // Optional: To automatically add createdAt and updatedAt timestamps
 );
 
-const Matrimonial = mongoose.model('Matrimonial', MatrimonialSchema);
+const Matrimonial = mongoose.model('MatrimonialPage', MatrimonialSchema);
 module.exports = Matrimonial;

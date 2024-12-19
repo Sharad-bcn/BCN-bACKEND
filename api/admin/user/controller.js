@@ -218,3 +218,59 @@ module.exports.fetchNewlyCreated = async (req, res) => {
     _r.error({ req, res, error });
   }
 };
+/**
+ * @argument {ObjectId} id
+ */
+module.exports.fetchSingle = async (req, res) => {
+  try {
+    const { args } = req.bind;
+
+    // Fetch the user by _id and exclude sensitive fields like 'pin'
+    const user = await User.findById(args.id, '-pin');
+
+    // If user is not found, return an error
+    if (!user) return _r.error({ req, res, code: 400, message: 'User not found' });
+
+    // Return the user details
+    _r.success({
+      req,
+      res,
+      code: 200,
+      payload: user,
+    });
+  } catch (error) {
+    _r.error({ req, res, error });
+  }
+};
+/**
+ * @argument {ObjectId} userId
+ */
+module.exports.fetchUserBusinesses = async (req, res) => {
+  try {
+    const { args } = req.bind;
+    const { userId } = args; // Get the userId from request arguments
+
+    // Validate the userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return _r.error({ req, res, code: 400, message: 'Invalid user ID' });
+    }
+
+    // Fetch businesses related to the user by fkUserId
+    const businesses = await Business.find({ fkUserId: userId });
+
+    if (!businesses || businesses.length === 0) {
+      return _r.error({ req, res, code: 404, message: 'No businesses found for this user' });
+    }
+
+    // Return the list of businesses
+    _r.success({
+      req,
+      res,
+      code: 200,
+      message: 'Businesses fetched successfully',
+      payload: businesses,
+    });
+  } catch (error) {
+    _r.error({ req, res, error });
+  }
+};

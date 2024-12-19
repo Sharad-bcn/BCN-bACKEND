@@ -2,6 +2,8 @@ const { _md5, $axios, _env } = require('express-tools')
 const Razorpay = require('razorpay')
 // const templates = require('./template')
 const SMS_SERVER = _env('SMS_SERVER')
+const { createPaymentLink, verifySignature } = require('./razorpay');
+const { sendSMS } = require('./sms');
 // const SMS_USER_ID = _env('SMS_USER_ID')
 // const SMS_PASSWORD = _env('SMS_PASSWORD')
 // const SMS_SENDER_ID = _env('SMS_SENDER_ID')
@@ -13,11 +15,8 @@ const RAZOR_PAY_API_KEY = _env('RAZOR_PAY_API_KEY')
 const RAZOR_PAY_API_SECRET = _env('RAZOR_PAY_API_SECRET')
 let SMS_TEST = _env('SMS_TEST')
 SMS_TEST = SMS_TEST === 'true'
-
 const generateUniqueKey = () => _md5(Math.round(Math.random() * 1e10).toString() + Date.now().toString())
-
 module.exports.generateUniqueKey = generateUniqueKey
-
 const sendOtp = async ({ type = 'OTP', phoneNo, otp }) => {
   let data = {
     MediaFile: '',
@@ -26,12 +25,10 @@ const sendOtp = async ({ type = 'OTP', phoneNo, otp }) => {
     ContactName: '',
     Attribute1: otp
   }
-
   const formData = new FormData()
   for (const [key, value] of Object.entries(data)) {
     formData.append(key, value)
   }
-
   return $axios({
     method: 'post',
     baseURL: SMS_SERVER,
@@ -45,7 +42,6 @@ const sendOtp = async ({ type = 'OTP', phoneNo, otp }) => {
     },
     data: formData
   })
-
   // let data = {
   //   userid: SMS_USER_ID,
   //   password: SMS_PASSWORD,
@@ -60,12 +56,10 @@ const sendOtp = async ({ type = 'OTP', phoneNo, otp }) => {
   //   duplicatecheck: true,
   //   test: SMS_TEST
   // }
-
   // const formData = new FormData()
   // for (const [key, value] of Object.entries(data)) {
   //   formData.append(key, value)
   // }
-
   // return $axios({
   //   method: 'post',
   //   baseURL: SMS_SERVER,
@@ -96,23 +90,16 @@ const sendOtp = async ({ type = 'OTP', phoneNo, otp }) => {
 //   }
 // })
 module.exports.sendOtp = sendOtp
-
 const getRazorPayInstance = () =>
   new Razorpay({
     key_id: RAZOR_PAY_API_KEY,
     key_secret: RAZOR_PAY_API_SECRET
   })
-
 module.exports.getRazorPayInstance = getRazorPayInstance
-
 const encrypt = data => Buffer.from(JSON.stringify(data), 'binary').toString('base64')
-
 module.exports.encrypt = encrypt
-
 const decrypt = data => JSON.parse(Buffer.from(data, 'base64').toString('binary'))
-
 module.exports.decrypt = decrypt
-
 const fetchPaymentStatus = async paymentId => {
   // try {
   // const paymentVerificationUrl = `https://api.razorpay.com/v1/payments/${paymentId}`
@@ -134,7 +121,6 @@ const fetchPaymentStatus = async paymentId => {
   //     password: RAZOR_PAY_API_SECRET
   //   }
   // })
-
   // return response.data.status
   const instance = getRazorPayInstance()
   let res = await instance.payments.fetch(paymentId)
@@ -145,3 +131,29 @@ const fetchPaymentStatus = async paymentId => {
   // }
 }
 module.exports.fetchPaymentStatus = fetchPaymentStatus
+
+module.exports = {
+  createPaymentLink,
+  verifySignature,
+  sendSMS,
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
