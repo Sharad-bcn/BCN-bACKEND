@@ -15,7 +15,7 @@ const ObjectId = mongoose.Types.ObjectId
 module.exports.create = async (req, res) => {
   try {
     const { args } = req.bind
-
+    
     const getListing = await Listing.findById(args.fkListingId)
 
     if (!getListing) return _r.error({ req, res, code: 400, message: 'Offering not found' })

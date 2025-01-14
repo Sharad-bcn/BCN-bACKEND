@@ -9,4 +9,5 @@ const controller = require('./controller')
 
 $router.use(middlewares.fetchAdmin)
 $router.put('/updateApprovalStatus', validator.updateApprovalStatus, controller.updateApprovalStatus)
-$router.get('/fetchNewlyCreated', validator.fetchNewlyCreated, controller.fetchNewlyCreated)
+$router.get('/fetchNewlyCreated', validator.fetchNewlyCreated, controller.fetchNewlyCreated),
+$router.get('/checkUserBusiness', validator.checkUserBusiness, controller.checkUserBusiness);

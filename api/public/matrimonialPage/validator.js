@@ -1,67 +1,55 @@
-const { $joi } = require('express-tools');
-const express = require('express');
+const { $joi } = require('express-tools'); // Validation library
 
-const $router = express.Router();
-module.exports = $router;
-
-// Custom validation middleware
-const validate = (schema, property) => {
-    return (req, res, next) => {
-        const { error } = schema.validate(req[property]);
-        if (error) {
-            return res.status(400).send(error.details[0].message);
-        }
-        next();
-    };
-};
-
-// Joi schemas
-const saveMatrimonialSchema = $joi.object({
-    name: $joi.string().required(),
-    email: $joi.string().email().required(),
-    address: $joi.string().required(),
-    gender: $joi.string().valid('male', 'female').required(),
-    dob: $joi.date().required(),
-    gotra: $joi.string(),
-    district_city: $joi.string(),
-    education: $joi.string(),
-    jobProfile: $joi.string(),
-    income: $joi.number(),
-    maritalStatus: $joi.string(),
-    fatherName: $joi.string(),
-    fatherProfession: $joi.string(),
-    motherName: $joi.string(),
-    motherProfession: $joi.string(),
-    contact: $joi.string().required(),
-});
-
-const searchQuerySchema = $joi.object({
-    gender: $joi.string(),
-    minAge: $joi.number(),
-    maxAge: $joi.number(),
-    location: $joi.string(),
-});
-
-const uploadPDFSchema = $joi.object({
-    file: $joi.object().required().messages({
-        "any.required": "A PDF file must be uploaded!" // This is the correct way to apply the error message
-    })
-});
-
-// Routes with validation middleware
-$router.post('/save', validate(saveMatrimonialSchema, 'body'), (req, res) => {
-    res.send('Matrimonial data saved successfully');
-});
-
-$router.post('/upload-pdf', (req, res, next) => {
-    if (!req.file) {
-      return res.status(400).send('No PDF file uploaded!');
-    }
-    next();
-  }, validate(uploadPDFSchema, 'file'), (req, res) => {
-    res.send('PDF file uploaded successfully');
+// Joi schema for validating matrimonial form data
+module.exports.validateMatrimonialForm = (formData) => {
+  const schema = $joi.object({
+    fullName: $joi.string().required().messages({
+      'string.empty': 'Full name is required!',
+    }),
+    mobileNumber: $joi.string().pattern(/^[\d]{10}$/).required().messages({
+      'string.pattern.base': 'Mobile number must be 10 digits!',
+    }),
+    email: $joi.string().email().required().messages({
+      'string.email': 'Invalid email format!',
+    }),
+    pinCode: $joi.string().pattern(/^[\d]{6}$/).required().messages({
+      'string.pattern.base': 'Pin code must be 6 digits!',
+    }),
+    dateOfBirth: $joi.date().required().messages({
+      'date.base': 'Date of birth is required!',
+    }),
+    address: $joi.string().optional(),
+    gender: $joi.string().valid('male', 'female').required().messages({
+      'any.only': 'Gender must be either male or female!',
+    }),
+    gotra: $joi.string().optional(),
+    districtCity: $joi.string().optional(),
+    educationQualification: $joi.string().optional(),
+    jobProfile: $joi.string().optional(),
+    annualIncome: $joi.number().optional(),
+    maritalStatus: $joi.string().optional(),
+    fatherName: $joi.string().optional(),
+    fatherProfession: $joi.string().optional(),
+    motherName: $joi.string().optional(),
+    motherProfession: $joi.string().optional(),
+    hobbies: $joi.array().items($joi.string()).optional(),
+    bloodGroup: $joi.string()
+      .valid('A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-')
+      .optional(),
+    height: $joi.number().positive().optional(),
   });
 
-$router.get('/search', validate(searchQuerySchema, 'query'), (req, res) => {
-    res.send('Search results returned successfully');
-});
+  const { error } = schema.validate(formData, { abortEarly: false });
+
+  const errors = error
+    ? error.details.reduce((acc, curr) => {
+        acc[curr.context.key] = curr.message;
+        return acc;
+      }, {})
+    : {};
+
+  return {
+    errors,
+    isValid: Object.keys(errors).length === 0,
+  };
+};
