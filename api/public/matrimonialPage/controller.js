@@ -1,158 +1,121 @@
-const { _r } = require("express-tools");
-const Matrimonial = require("../../../models").Matrimonial;
-const mongoose = require("mongoose");
-const ObjectId = mongoose.Types.ObjectId;
-const { validateMatrimonialForm } = require("./validator"); 
+const { _r } = require('express-tools');
+const Matrimonial = require('../../../models');  // Assuming the model exists
+const mongoose = require('mongoose');
+const path = require('path');
 
 /**
- * Helper function to calculate age from date of birth
+ * POST - Save matrimonial form data
  */
-const calculateAge = (dob) => {
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-};
-
-/**
- * Function to upload files to S3 (mock implementation, replace with actual logic)
- */
-const uploadToS3 = async (fileName, file) => {
-  console.log(`Uploading file: ${fileName}`);
-  return `https://s3-bucket-url/${fileName}`;
-};
- 
-/**
- * Function to save matrimonial data to the database
- */
-const saveMatrimonialData = async (formData) => {
-  const matrimonial = new Matrimonial(formData);
-  return await matrimonial.save();
-};
-
-/**
- * Submit Matrimonial Form Handler
- */
-module.exports.submitMatrimonialForm = async (req, res) => {
+module.exports.saveMatrimonial = async (req, res) => {
   try {
-    const { name, email, address, gender, dob, contact } = req.body;
-    let { photo } = req.files || {}; // Use req.files for file handling
+    const { name, email, address, gender, dob, gotra, district_city, education, jobProfile, income, maritalStatus, fatherName, fatherProfession, motherName, motherProfession, contact } = req.body;
 
-    console.log('1. Starting form submission', name, email, address, gender, dob, contact, photo);
-
-    // Basic validation
-    if (!req.body) {
-      console.log('4. No body found');
-      return res.status(400).json({ error: "No form data provided" });
-    }
-
-    const alreadyExists = await Matrimonial.findOne({ contact: contact });
-    if (alreadyExists) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    if (email) {
-      const user = await Matrimonial.findOne({ email: email });
-      if (user) return res.status(400).json({ error: 'User with this email already exists' });
-    }
-
-    // Handle photo file upload
-    let photoPath = '';
-    if (photo) {
-      // Ensure the photo is uploaded to a directory
-      const uploadPath = `./uploads/${photo.name}`;
-      await photo.mv(uploadPath);
-      photoPath = uploadPath;  // Store the path to the photo
-    }
-
-    // Create basic form data without file handling first
-    const formData = {
-      name: name || '',
-      email: email || '',
-      gender: gender || '',
-      address: address || '',
-      dob: dob || '',
-      contact: contact || '',
-      photo: photoPath, // Store the photo path
-      declaration: true
+    const calculateAge = (dob) => {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
     };
 
-    console.log('5. Processed form data:', formData);
+    const age = calculateAge(dob);
 
-    // Try to save to database
-    console.log('6. Attempting to save to database');
-    const matrimonial = new Matrimonial(formData);
-    const savedData = await matrimonial.save();
-    console.log('7. Save successful:', savedData._id);
-
-    // Send the success response
-    return res.status(200).json({
-      success: true,
-      message: "Profile created successfully",
-      data: savedData
+    const newMatrimonial = new Matrimonial({
+      name,
+      email,
+      address,
+      gender,
+      dob,
+      gotra,
+      district_city,
+      education,
+      jobProfile,
+      income,
+      maritalStatus,
+      fatherName,
+      fatherProfession,
+      motherName,
+      motherProfession,
+      contact,
+      photo: req.file ? req.file.path : null,
+      age
     });
 
+    await newMatrimonial.save();
+    _r.success({ req, res, code: 201, message: "Matrimonial form data saved successfully", payload: { data: newMatrimonial } });
   } catch (error) {
-    console.error('Error in submitMatrimonialForm:', { message: error.message, stack: error.stack });
-
-    // Ensure the response is only sent once in case of error
-    if (!res.headersSent) {
-      return res.status(500).json({ error: "Internal server error", message: error.message });
-    }
+    _r.error({ req, res, error });
   }
 };
+/**
+ * Post- upload photo pdf
+ */
+
+module.exports.uploadPDF = async (req, res) => {
+  try {
+    // Check if a file is uploaded
+    if (!req.file) {
+      return _r.error({
+        req,
+        res,
+        code: 400,
+        message: "No PDF file uploaded!",
+      });
+    }
+    // Extract file details
+    const filePath = req.file.path;
+    const originalName = req.file.originalname;
+    // Respond with success
+    _r.success({
+      req,
+      res,
+      code: 201,
+      message: "PDF file uploaded successfully!",
+      payload: {
+        filePath,
+        originalName,
+      },
+    });
+  } catch (error) {
+    // Handle any server errors
+    _r.error({
+      req,
+      res,
+      error,
+      message: "Error during PDF upload",
+    });
+  }
+};
+// Update the uploadToS3 function
 
 /**
  * Search Matrimonial Profiles Handler
  */
 module.exports.searchMatrimonialProfiles = async (req, res) => {
   try {
-    const {
-      gender,
-      minAge,
-      maxAge,
-      city,
-      customCity,
-      state,
-      qualification,
-      occupation,
-      annualIncome,
-    } = req.query;
-
-    // Build query object
+    const { gender, minAge, maxAge, location } = req.query;
     const query = {};
     if (gender) query.gender = gender;
     if (minAge || maxAge) {
       const today = new Date();
-      if (minAge) {
-        query.dateOfBirth = { $lte: new Date(today.getFullYear() - minAge, today.getMonth(), today.getDate()) };
-      }
-      if (maxAge) {
-        query.dateOfBirth = {
-          ...query.dateOfBirth,
-          $gte: new Date(today.getFullYear() - maxAge, today.getMonth(), today.getDate())
-        };
-      }
+      const minAgeDate = new Date(today);
+      minAgeDate.setFullYear(today.getFullYear() - minAge);
+      const maxAgeDate = new Date(today);
+      maxAgeDate.setFullYear(today.getFullYear() - maxAge);
+      query.dob = { $gte: maxAgeDate, $lte: minAgeDate };
     }
-    if (city || customCity) query.city = customCity || city;
-    if (state) query.state = state;
-    if (qualification) query.qualification = qualification;
-    if (occupation) query.occupation = occupation;
-    if (annualIncome) query.annualIncome = { $gte: annualIncome };
+
+    if (location) query.district_city = { $regex: location, $options: "i" };
 
     const results = await Matrimonial.find(query);
-
-    if (results.length === 0) {
-      return res.status(404).json({ message: "No matching profiles found." });
-    }
-
-    return res.status(200).json({ message: "Search results found.", data: results });
+    if (results.length === 0) return _r.error({ req, res, code: 404, message: 'No matching profiles found.' });
+    
+    _r.success({ req, res, code: 200, message: 'Search results found', payload: { data: results } });
   } catch (error) {
     console.error("Error searching profiles:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
-}
+};

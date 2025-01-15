@@ -77,14 +77,12 @@ const MatrimonialSchema = new Schema(
         cv: { 
             type: String,  // Store the file path or URL of the uploaded CV
         },
-        declaration: { type: Boolean, required: true, default: '' },
-        // Age is now dynamically calculated based on dob
         age: { 
             type: Number
         }
     },
     { timestamps: true } // Automatically add createdAt and updatedAt timestamps
 );
-MatrimonialSchema.index({ email: 1, contact: 1 });
-const Matrimonial = mongoose.model('MatrimonialPage', MatrimonialSchema);
+
+const Matrimonial = mongoose.model('Matrimonial', MatrimonialSchema);
 module.exports = Matrimonial;
