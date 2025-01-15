@@ -7,4 +7,5 @@ router.use('/admin', require('./admin/router'))
 router.use('/auth', require('./auth/router'))
 router.use('/public', require('./public/router'))
 router.use('/userAdmin', require('./userAdmin/router'))
+
 module.exports = router

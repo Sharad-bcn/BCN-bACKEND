@@ -80,3 +80,37 @@ module.exports.fetchNewlyCreated = async (req, res) => {
     _r.error({ req, res, error })
   }
 }
+/**
+ * @argument {ObjectId} userId
+ */
+module.exports.checkUserBusiness = async (req, res) => {
+  try {
+    console.log('Authorization Header:', req.headers.authorization);
+    console.log('Backend Access Key:', req.get('Backendaccesskey'));
+
+    const { args } = req.bind
+
+    // Query to find businesses linked to the user
+    const userBusiness = await Business.findOne({ fkUserId: args.userId });
+
+    if (!userBusiness) {
+      return _r.success({
+        req,
+        res,
+        code: 200,
+        message: 'User has no business.',
+        payload: { hasBusiness: false }
+      });
+    }
+
+    _r.success({
+      req,
+      res,
+      code: 200,
+      message: 'User has a business.',
+      payload: { hasBusiness: true, business: userBusiness }
+    });
+  } catch (error) {
+    _r.error({ req, res, error });
+  }
+};
